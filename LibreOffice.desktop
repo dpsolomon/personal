@@ -1,0 +1,32 @@
+[Desktop Entry]
+Version=1.0
+Name=LibreOffice
+Comment=LibreOffice
+GenericName=Office
+Exec=libreoffice %U
+Terminal=false
+Type=Application
+Icon=libreoffice-startcenter
+Categories=Office
+StartupNotify=true
+X-Ayatana-Desktop-Shortcuts=Writer;Calc;Impress;Draw;
+
+[Writer Shortcut Group]
+Name=Writer
+Exec=libreoffice --writer %U
+TargetEnvironment=Unity
+
+[Calc Shortcut Group]
+Name=Calc
+Exec=libreoffice --calc %U
+TargetEnvironment=Unity
+
+[Impress Shortcut Group]
+Name=Impress
+Exec=libreoffice --impress %U
+TargetEnvironment=Unity
+
+[Draw Shortcut Group]
+Name=Draw
+Exec=libreoffice --draw %U
+TargetEnvironment=Unity
