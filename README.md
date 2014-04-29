@@ -27,3 +27,11 @@ The virtual machines are located at [C:\AES\Software\VMs](R:\AES\Software\VMs "R
 - ROS Training Hydro
 - ROS Training Groovy
 
+# Desktop Shortcuts #
+
+- LibreOffice.desktop
+	- Designed to replace multiple LibreOffice desktop icons with 1 expandable icon.
+	- Copy to ~/.local/applications. Make sure file is allowed to execute.
+	- Run desktop icon and lock to launcher.
+	- Log out/in to fully enable functionality.
+
