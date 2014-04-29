@@ -27,6 +27,13 @@ The virtual machines are located at [C:\AES\Software\VMs](R:\AES\Software\VMs "R
 - ROS Training Hydro
 - ROS Training Groovy
 
+# Things to do with New VM Installation #
+
+- Update git config
+	- git config --global user.name "Your Name"
+    	- git config --global user.email you@example.com
+
+
 # Desktop Shortcuts #
 
 - LibreOffice.desktop
