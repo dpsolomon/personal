@@ -5,7 +5,7 @@ Common utilities, configurations, and other stuff that is generally useful.
 
 
 # Virtual Machines #
-The virtual machines are located at [C:\AES\Software\VMs](R:\AES\Software\VMs "R:\AES\Software\VMs"). 
+The virtual machines are located at [R:\AES\Software\VMs](R:\AES\Software\VMs "R:\AES\Software\VMs"). 
 
 - Ubuntu 12.04 Common 64
 	- Fresh install of Ubuntu 12.04 64-bit. All updates have been applied after the initial install.
@@ -31,7 +31,7 @@ The virtual machines are located at [C:\AES\Software\VMs](R:\AES\Software\VMs "R
 
 - Update git config
 	- git config --global user.name "Your Name"
-    	- git config --global user.email you@example.com
+	- git config --global user.email you@example.com
 
 
 # Desktop Shortcuts #
