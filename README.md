@@ -8,16 +8,21 @@ Common utilities, configurations, and other stuff that is generally useful.
 The virtual machines are located at [R:\AES\Software\VMs](R:\AES\Software\VMs "R:\AES\Software\VMs"). 
 
 - Ubuntu 12.04 Common 64
-	- Fresh install of Ubuntu 12.04 64-bit. All updates have been applied after the initial install.
-	- Use this as a baseline Ubuntu system.
+	- Description
+		- Fresh install of Ubuntu 12.04 64-bit. All updates have been applied after the initial install.
+		- Use this as a baseline Ubuntu system.
+	- Notes for _v1 (TODO)
+		- Update Eclipse with ros style formatting and doxygen 
 - ROS Hydro Common 64
 	- Description
-		- Ubuntu 12.04 with install of hydro-desktop-full
+		- Ubuntu 12.04 with install of **hydro-desktop-full**
 		- Eclipse Indigo IDE with C++ development kit
 		- git
 		- meld
 	- _v0 (notes)
 		- Fresh install of Eclipse
+	- Notes for _v1 (TODO)
+		- Incorporate changes from **Ubuntu 12.04 Common 64_v1**
 - ROS Hydro Common
 	- Description
 		- Ubuntu 12.04 32-bit with install of hydro-desktop-full
