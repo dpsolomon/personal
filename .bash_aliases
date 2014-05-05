@@ -1,0 +1,1 @@
+/home/ros/.bash_aliases

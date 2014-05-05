@@ -47,3 +47,7 @@ The virtual machines are located at [R:\AES\Software\VMs](R:\AES\Software\VMs "R
 	- Run desktop icon and lock to launcher.
 	- Log out/in to fully enable functionality.
 
+# Eclipse Configuration #
+
+- Make sure ros-style formatting is selected
+- Import C++ code templates: **Window:Preferences:C/C++:Code Style:Code Templates:Import**. Templates can be selected when creating a new file using Eclipse.
