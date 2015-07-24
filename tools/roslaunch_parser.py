@@ -2,6 +2,10 @@
 from copy import deepcopy
 import xml.etree.ElementTree as ET
 import sys
+try:
+    import rospkg
+except ImportError:
+    pass
 
 
 def dexacro(line):
@@ -25,6 +29,22 @@ def dexacro(line):
 def condition_str(conditions):
     return ' & '.join([dexacro(condition) for condition in conditions])
 
+def condense(text):
+    max_len = 90
+    lines = text.split('\n')
+    rep = ''
+    for line in lines:
+        if len(line) > max_len:
+            space_count = map(str.isspace, line).index(False) # Count number of spaces preceeding line
+            rep += line[0:max_len] + '\n'
+            for ii in range(1,int(round(len(line)/float(max_len)+0.5))+1):
+                rep += ' '*space_count + line[ii*max_len:(ii+1)*max_len] + '\n'
+        elif False in map(str.isspace, line):
+            rep += line + ' '*(max_len-len(line)) + '\n'
+    return rep
+    
+def graphviz_format(text):
+    return text.replace('\n', '\\l').replace('{', '\{').replace('}', '\}').replace('"', "'")
 
 class ArgBlock:
     def __init__(self):
@@ -40,7 +60,7 @@ class ArgBlock:
         tab = str()
         if show_conditions and conditions:
             rep = 'if ' + conditions + ':\n'
-            tab = '  '
+            tab = '    '
         if value:
             if value[0] == '(':
                 rep += tab + '%s (= %s)' % (name, value[1:-1])
@@ -66,7 +86,7 @@ class ParamBlock:
         tab = str()
         if show_conditions and conditions:
             rep = 'if ' + conditions + ':\n'
-            tab = '  '
+            tab = '    '
         rep += tab + '%s%s = %s' % (ns, name, value)
         return rep
 
@@ -88,7 +108,7 @@ class NodeBlock:
         tab = str()
         if show_conditions and conditions:
             rep = 'if ' + conditions + ':\n'
-            tab = '  '
+            tab = '    '
         rep += tab + '%s%s: %s/%s' % (ns, name, pkg, node_type)
         return rep
     
@@ -108,7 +128,7 @@ class IncludeBlock:
         tab = str()
         if show_conditions and conditions:
             rep = 'if ' + conditions + ':\n'
-            tab = '  '
+            tab = '    '
         rep += tab + '%s' % (filename)
         for arg in args:
             rep += '\n' + tab + '  ' + arg
@@ -116,20 +136,19 @@ class IncludeBlock:
     
     
 class LaunchFileRepresentation:
-    def __init__(self, filename):
-        self.filename = filename
+    def __init__(self, title):
+        self.title = title
         self.args = []
         self.params = []
         self.nodes = []
         self.includes = []
         
     def __repr__(self):
-        print '\n' + '- '*25
-        print self.filename
+        rep = '\n' + '- '*25 + '\n' + self.title + '\n'
         tab = '  '
 
         # Collect args
-        rep = '\nargs:\n\n'
+        rep += '\nargs:\n\n'
         args = {}
         for arg in self.args:
             key = condition_str(arg.conditions)
@@ -140,21 +159,13 @@ class LaunchFileRepresentation:
                 args[key] = [val]
         for condition, vals in args.items():
             if condition:
-                #print tab + 'if ' + condition
                 rep += 'if ' + condition + '\n'
                 for arg in vals:
-                    #print tab + tab + arg
                     rep += tab + arg + '\n'
             else:
                 for arg in vals:
-                    #print tab + arg
                     rep += arg + '\n'
-        #    rep += tab + condition + ':\n'
-        #   for item in arg:
-        #        rep += tab + '  ' + item + '\n'
-                
-        #for arg in self.args:
-        #    rep += tab + str(arg).replace('\n', '\n'+tab) + '\n'
+
         rep += '\nparams:\n\n'
         for param in self.params:
             #rep += str(param).replace('\n', '\n'+tab) + '\n'
@@ -167,6 +178,54 @@ class LaunchFileRepresentation:
         for include in self.includes:
             #rep += str(include).replace('\n', '\n'+tab) + '\n'
             rep += str(include).replace('\n', '\n') + '\n'
+        return rep
+        
+    def graphviz(self):
+        tab = '  '
+        
+        # Collect args
+        rep_args = ''
+        args = {} # Mapping of conditions to arguments
+        for arg in self.args:
+            key = condition_str(arg.conditions)
+            val = arg.__repr__(False).replace('\n', '\\n') #TODO need this?
+            if key in args:
+                args[key].append(val)
+            else:
+                args[key] = [val]
+        for condition, vals in args.items():
+            if condition:
+                rep_args += graphviz_format(condense('if ' + condition))
+                for arg in vals:
+                    rep_args += graphviz_format(condense(tab + arg))
+            else:
+                for arg in vals:
+                    rep_args += graphviz_format(condense(arg))
+
+        # Create representations for params, nodes, includes
+        rep_params = ''
+        for param in self.params:
+            rep_params += graphviz_format(condense(str(param)))
+        rep_nodes = ''
+        for node in self.nodes:
+            rep_nodes += graphviz_format(condense(str(node)))
+        rep_includes = ''
+        for include in self.includes:
+            rep_includes += graphviz_format(condense(str(include)))
+            
+        rep = '"' + graphviz_format(self.title) + '" [shape=record, label="{' + graphviz_format(self.title)
+        if len(rep_args) > 0:
+            rep += '|{args\l|' + rep_args + '}'
+        if len(rep_params) > 0:
+            rep += '|{params\l|' + rep_params + '}'
+        if len(rep_nodes) > 0:
+            rep += '|{nodes\l|' + rep_nodes + '}'
+        if len(rep_includes) > 0:
+            rep += '|{includes\l|' + rep_includes + '}'
+        rep += '}"];\n'
+        
+        for include in self.includes:
+            rep += '"' + graphviz_format(self.title) + '" -> "' + graphviz_format(dexacro(include.file)) + '";\n'
         return rep
         
     def parse_tree(self, tree):
@@ -183,8 +242,6 @@ class LaunchFileRepresentation:
             conditions2.append(element.get('if'))
         if element.get('unless'):
             conditions2.append('!' + element.get('unless'))
-#        if element.get('ns'):
-#            ns += element.get('ns') + '/'
         
         # Collect blocks
         block = None
@@ -278,28 +335,151 @@ class LaunchFileRepresentation:
         for child in element:
             self.parse_element(child, conditions, child_ns)
         return block
+        
+class NodeLaunchFile:
+    def __init__(self, title):
+        self.title = title
+        self.children = []
+        
+    def add_child(self, child):
+        self.children.append(child)
+        
+    def add_children(self, children):
+        for child in children:
+            self.add_child(child)
+            
+    def __repr__(self, tab=''):
+        rep = ''
+        rep += tab + self.title + '[shape=box]' + ';\n'
+        for child in self.children:
+            rep += tab + self.title + ' -> ' + child + ';\n'
+        return rep
 
+def show_help():
+    print ('Usage: roslaunch_parser.py [options] path/to/launch_file.launch\n' +
+           '  options:\n' +
+           '    -h, --help          : Show this message and quit.\n' +
+           '    -o filename         : Output for result (default: screen). Specify filename here.\n' +
+           '    -a, -c              : Crawl all files (default: just process given file).\n'
+           '    -g filename         : Create a graphviz file. Specify filename here.\n'
+           '    -v variable value   : Replaces roslaunch variable with given value.\n')
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print 'Usage: roslaunch_parser.py path/to/launch_file.launch'
-        
-    filename = sys.argv[1]
-    try:
-        tree = ET.parse(filename)
-    except IOError:
-        print 'Could not open file \'%s\'' % filename
+        print 'Minimal usage: roslaunch_parser.py path/to/launch_file.launch; roslaunch_parser.py -h for more info.'
         sys.exit(1)
-     
-    '''
-    root = tree.getroot()
-    if root.tag != 'launch':
-        raise Exception('root does not contain \'launch\' tag (%s)' % (root.tag))
-        
-    for child in root:
-        parse_element(child)
-    '''
-    launch_file = LaunchFileRepresentation(filename)
-    launch_file.parse_tree(tree)
-    print launch_file
+
+    # Parse all arguements into variables        
+    crawl = False
+    output_file = ''
+    graphviz_file = ''
+    unprocessed_files = []
+    var_map = {}
     
+    for ii in range(1,len(sys.argv)-1):
+        arg = sys.argv[ii]
+        if arg in ['-h', '--help']:
+            show_help()
+            sys.exit(0)
+        elif arg in ['-o']:
+            if sys.argv[ii+1][0].isalpha():
+                output_file = sys.argv[ii+1]
+            else:
+                print '-o followed by non-alpha character. Ignoring option.'
+        elif arg in ['-a', '-c'] and 'rospkg' in sys.modules:
+            # if rospkg not on this system, cannot crawl by package name
+            crawl = True
+            rospack = rospkg.RosPack()
+        elif arg in ['-g']:
+            if sys.argv[ii+1][0].isalpha():
+                graphviz_file = sys.argv[ii+1]
+            else:
+                print '-g followed by non-alpha character. Ignoring option.'
+        elif arg in ['-v']:
+            if sys.argv[ii+1][0].isalpha() and sys.argv[ii+2][0].isalpha():
+                var_map[sys.argv[ii+1]] = sys.argv[ii+2]
+            else:
+                print '-v followed by non-alpha character. Ignoring option.'
+            
+            
+    unprocessed_files.append(sys.argv[-1])
+    
+    # If output is set, open a file for writing
+    if len(output_file) > 0:
+        try:
+            output = open(output_file, 'w')
+        except IOError:
+            print 'Couldn\'t open \'%s\' for writing output. Outputting to screen.' % (output_file)
+            output_file = ''
+    
+    # Start parsing
+    processed_files = [] # Filename added to this list when it is processed (to check for repetition).
+    launch_nodes = []    # For graphviz file
+    while len(unprocessed_files) > 0:
+    
+        # Don't reprocess files
+        while unprocessed_files[0] in processed_files:
+            del unprocessed_files[0]
+
+        # Set filename, delete from unprocessed_files list            
+        filename = unprocessed_files[0]
+        del unprocessed_files[0]
+        processed_files.append(filename)
+        
+        # Check if filename is relative to ros package
+        lfr_title = filename # Title of LaunchFileRepresentation (may be different than filename).
+        for key in sorted(var_map):
+            filename = filename.replace('{'+key+'}', var_map[key])
+            
+        if 'rospkg' in sys.modules:
+            try:
+                package, local_file = filename.split('/', 1)
+                filename = rospack.get_path(package) + '/' + local_file
+            except (rospkg.common.ResourceNotFound, ValueError):
+                pass
+                
+        
+        # Create an element-tree from xml
+        try:
+            tree = ET.parse(filename)
+        except (IOError, TypeError):
+            print 'Could not open or parse file \'%s\'' % (filename)
+            launch_file = LaunchFileRepresentation(lfr_title)
+            launch_nodes.append(launch_file)
+            continue
+        
+        # Create a LaunchFileRepresentation of xml tree.
+        launch_file = LaunchFileRepresentation(lfr_title)
+        launch_file.parse_tree(tree)
+                
+        # Write text-representation of launch file to screen or output file.
+        if len(output_file) > 0:
+            try:
+                output.write(str(launch_file))
+            except IOError:
+                print 'Problem writing to \'%s\'.' % (output_file)
+        else:
+            print launch_file
+        
+        # If selected to crawl all includes, pass includes into unprocessed_files list.
+        if crawl:
+            #node = NodeLaunchFile('"' + launch_file.title + '"')
+            for include in launch_file.includes:
+            #    node.add_child('"' + dexacro(include.file) + '"')
+                unprocessed_files.append(dexacro(include.file))
+            #launch_nodes.append(node)
+            launch_nodes.append(launch_file)
+                
+    # Write graphviz file
+    if len(graphviz_file) > 0:
+        with open(graphviz_file, 'w') as graphviz:
+            graphviz.write('\ndigraph launch_nodes {\nnodesep="0.1";\nranksep=0.1;\n')
+            for node in launch_nodes:
+                graphviz.write(node.graphviz())
+            graphviz.write('}\n')
+    
+    # Close output file
+    if len(output_file) > 0:
+        output.close()
+        
+        
